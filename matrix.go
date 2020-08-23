@@ -4,26 +4,17 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"runtime"
 	"time"
 )
 
-var mstick int = 0
-var coe []byte = []byte{3, 15}
+var coe []byte
 
-func Timer() {
-	for {
-		/*
-		 * Accuracy of sleep seems to highly depend on the environment, but the length of sleep(x) seems to
-		 * be consistent within the same environment so it can effectively be used as a time tick.
-		 */
-		time.Sleep(time.Nanosecond)
-		mstick++
-	}
-}
+const TestAmount = 100
 
-func Cong(seed byte) byte {
+func Cong(x byte) byte {
 	/* Here we take advantage of datatype overflow to avoid costy modulo, since they do the same thing in effect */
-	return coe[0]*seed + coe[1]
+	return coe[0]*x + coe[1]
 }
 
 func MultiplexTask(tasks int, mat []byte) {
@@ -34,7 +25,7 @@ func MultiplexTask(tasks int, mat []byte) {
 		go func(id int, wg *sync.WaitGroup) {
 			lower := id * total / tasks
 			for i, _ := range mat[lower : (id+1)*total/tasks] {
-				mat[i+lower] = Cong(byte(mstick))
+				mat[i+lower] = Cong(byte(i))
 			}
 			wg.Done()
 		}(a, &wg)
@@ -46,16 +37,30 @@ func main() {
 	fmt.Println("Begin")
 
 	rand.Seed(time.Now().UTC().UnixNano())
+	coe = make([]byte, 2)
 	rand.Read(coe) /* Fill the congruential parameters (a and c) with better randomness for variety */
 
 	num := 10000 * 10000
 	mat := make([]byte, num)
 
-	go Timer()
-	start := time.Now()
+	var avr []int64
+	for i := 1 ; i <= runtime.NumCPU() ; i++ {
+		var lavr int64 = 0
+		fmt.Printf("%d threads\n", i)
+		for j := 0 ; j < TestAmount ; j++ {
+			start := time.Now()
 
-	MultiplexTask(1, mat) /* Keep in mind that the timer technically should be counted as one thread too for it not to be smothered if value passed is CPUNUM */
-
-	fmt.Println("Took (real time): ", time.Now().Sub(start))
-	// fmt.Println(mat) /* Print the matrix, it can take a long time */
+			MultiplexTask(i, mat) /* Keep in mind that the timer technically should be counted as one thread too for it not to be smothered if value passed is CPUNUM */
+		
+			telap := time.Now().Sub(start).Milliseconds()
+			lavr += telap
+			fmt.Printf("Cores: %d | Iteration: %d -> Took (real time): %d ms\n", i,  j, telap)
+		}
+		lavr /= TestAmount
+		avr = append(avr, lavr)
+	}
+	fmt.Println("Testing finished!")
+	for i, a := range avr {
+		fmt.Printf("Average on %d cores: %d ms.\n", i+1, a)
+	}
 }
