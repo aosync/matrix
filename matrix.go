@@ -7,18 +7,17 @@ import (
 	"time"
 )
 
-var start time.Time
-var now byte = 0
+var mstick int = 0
 var coe []byte = []byte{3, 15}
 
 func Timer() {
-	start = time.Now()
 	for {
 		/*
 		 * Accuracy of sleep seems to highly depend on the environment, but the length of sleep(x) seems to
 		 * be consistent within the same environment so it can effectively be used as a time tick.
 		 */
-		now = byte(time.Now().Sub(start))
+		time.Sleep(time.Nanosecond)
+		mstick++
 	}
 }
 
@@ -35,7 +34,7 @@ func MultiplexTask(tasks int, mat []byte) {
 		go func(id int, wg *sync.WaitGroup) {
 			lower := id * total / tasks
 			for i, _ := range mat[lower : (id+1)*total/tasks] {
-				mat[i+lower] = Cong(now)
+				mat[i+lower] = Cong(byte(mstick))
 			}
 			wg.Done()
 		}(a, &wg)
@@ -53,6 +52,7 @@ func main() {
 	mat := make([]byte, num)
 
 	go Timer()
+	start := time.Now()
 
 	MultiplexTask(1, mat) /* Keep in mind that the timer technically should be counted as one thread too for it not to be smothered if value passed is CPUNUM */
 
