@@ -57,5 +57,5 @@ func main() {
 	MultiplexTask(1, mat) /* Keep in mind that the timer technically should be counted as one thread too for it not to be smothered if value passed is CPUNUM */
 
 	fmt.Println("Took (real time): ", time.Now().Sub(start))
-	fmt.Println(mat) /* Print the matrix, it can take a long time */
+	// fmt.Println(mat) /* Print the matrix, it can take a long time */
 }
