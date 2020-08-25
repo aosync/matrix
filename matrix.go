@@ -9,13 +9,10 @@ import (
 )
 
 var coe []byte
+var d byte
+var e byte
 
 const TestAmount = 100
-
-func Cong(x byte) byte {
-	/* Here we take advantage of datatype overflow to avoid costy modulo, since they do the same thing in effect */
-	return coe[0]*x + coe[1]
-}
 
 func MultiplexTask(tasks int, mat []byte) {
 	total := len(mat)
@@ -23,9 +20,9 @@ func MultiplexTask(tasks int, mat []byte) {
 	for a := 0; a < tasks; a++ {
 		wg.Add(1)
 		go func(id int, wg *sync.WaitGroup) {
-			lower := id * total / tasks
-			for i, _ := range mat[lower : (id+1)*total/tasks] {
-				mat[i+lower] = Cong(byte(i))
+			submat := mat[id * total / tasks : (id+1)*total/tasks]
+			for i, _ := range submat {
+				submat[i] = d*byte(i) + e
 			}
 			wg.Done()
 		}(a, &wg)
@@ -39,6 +36,8 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	coe = make([]byte, 2)
 	rand.Read(coe) /* Fill the congruential parameters (a and c) with better randomness for variety */
+	d = coe[0]
+	e = coe[1]
 
 	num := 10000 * 10000
 	mat := make([]byte, num)
